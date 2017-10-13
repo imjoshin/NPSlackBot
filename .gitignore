@@ -1,0 +1,4 @@
+auth.py
+log
+*.pyc
+*.json
