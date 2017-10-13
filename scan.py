@@ -47,7 +47,9 @@ def postToSlack(currentTurn, lastTurn):
 	log("Posting to slack...")
 	attachments = []
 
-	for player in currentTurn['players']:
+	players = sorted(currentTurn['players'], key=lambda k: k['rank']) 
+
+	for player in players:
 		# get this player last turn
 		for lastPlayer in lastTurn['players']:
 			if player['name'] == lastPlayer['name']:
@@ -55,9 +57,9 @@ def postToSlack(currentTurn, lastTurn):
 
 		# determine rank change
 		if player['rank'] > playerLastTurn['rank']:
-			rankDif = "(:green-up: %d )" % (player['rank'] - playerLastTurn['rank'])
+			rankDif = "(:red-down: %d )" % (player['rank'] - playerLastTurn['rank'])
 		elif player['rank'] < playerLastTurn['rank']:
-			rankDif = "(:red-down: %d )" % (playerLastTurn['rank'] - player['rank'])
+			rankDif = "(:green-up: %d )" % (playerLastTurn['rank'] - player['rank'])
 		else:
 			rankDif = ""
 
