@@ -1,4 +1,5 @@
 auth.py
 log
+log_debug
 *.pyc
 *.json
