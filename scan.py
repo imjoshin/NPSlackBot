@@ -47,7 +47,7 @@ def postToSlack(currentTurn, lastTurn):
 	log("Posting to slack...")
 	attachments = []
 
-	players = sorted(currentTurn['players'], key=lambda k: k['rank']) 
+	players = sorted(currentTurn['players'], key=lambda k: k['rank'])
 
 	for player in players:
 		# get this player last turn
@@ -64,7 +64,7 @@ def postToSlack(currentTurn, lastTurn):
 			rankDif = ""
 
 		title = '%d. %s %s' % (player['rank'], player['name'], rankDif)
-		text = ':np-econ: %d :np-ind: %d :np-sci: %d' % (player['total_economy'], player['total_industry'], player['total_science'])
+		text = ':np-star: %d :np-ship: %d\n:np-econ: %d :np-ind: %d :np-sci: %d' % (player['total_stars'], player['total_strength'], player['total_economy'], player['total_industry'], player['total_science'])
 
 		attachments.append({
 			'color': player['color'],
@@ -82,7 +82,7 @@ def postToSlack(currentTurn, lastTurn):
 
 	post = {
         'username': constants.SLACK_USER,
-        'channel': auth.SLACK_CHANNEL,
+        'channel': auth.SLACK_CHANNEL if not constants.DEBUG else auth.SLACK_CHANNEL_DEBUG,
         'icon_url': constants.SLACK_ICON,
         'attachments': attachments,
 		'text': 'Turn *%d* just started! Here is the leaderboard:' % (currentTurn['turn_num'])

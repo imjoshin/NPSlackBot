@@ -1,3 +1,5 @@
+DEBUG = False
+
 BASE_CURL = "curl -X POST -H 'Content-type: application/json' %s"
 SLACK_CURL = "curl -X POST -H 'Content-type: application/json' --data '%s' %s"
 SLACK_USER = "SpacegameBot"
