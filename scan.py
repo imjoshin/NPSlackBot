@@ -1,7 +1,12 @@
 import subprocess, time, json, datetime, os, sys
 import constants, auth
 
+lastPlayerNotified = False
+
 def main():
+	global lastPlayerNotified
+	lastPlayerNotified = False
+
 	while(1):
 		apiUrl = auth.API_DATA_URL % (constants.GAME_ID)
 		command = constants.BASE_CURL % (apiUrl)
@@ -20,6 +25,8 @@ def main():
 		time.sleep(constants.SLEEP_TIME)
 
 def processCurl(currentTurn):
+	global lastPlayerNotified
+
 	# read data file
 	with open(constants.TURN_FILE, 'a+') as turnFile:
 		# if first scan
@@ -43,6 +50,17 @@ def processCurl(currentTurn):
 				turnFile.write(json.dumps(turnData))
 			log("Starting turn #%d! Wrote to %s." % (currentTurn['turn_num'], constants.TURN_FILE))
 			postToSlack(currentTurn, lastTurn)
+			lastPlayerNotified = False
+		elif not lastPlayerNotified:
+			playersNotReady = 0
+			for player in currentTurn['players']:
+				if not player['ready']:
+					playersNotReady += 1
+					playerToPost = player
+
+			if playersNotReady is 1:
+				postLastPlayerToSlack(playerToPost)
+				lastPlayerNotified = True
 
 def postToSlack(currentTurn, lastTurn):
 	log("Posting to slack...")
@@ -56,9 +74,9 @@ def postToSlack(currentTurn, lastTurn):
 				player['lastTurn'] = lastPlayer
 
 	if constants.CONDENSED_POST:
-		postToSlackFull(players, currentTurn)
-	else:
 		postToSlackCondensed(players, currentTurn)
+	else:
+		postToSlackFull(players, currentTurn)
 
 def postToSlackCondensed(players, turn):
 	attachments = []
@@ -67,8 +85,13 @@ def postToSlackCondensed(players, turn):
 		rankDif = getRankDif(player, player['lastTurn'], True)
 		status = "BOT: " if player['conceded'] is 1 else "AFK: " if player['conceded'] is 2 else ""
 
+		tech = 0
+		for techName in player['tech']:
+			tech += int(player['tech'][techName]['level'])
+		#tech = tech / len(player['tech'])
+
 		title = '%d. %s%s %s' % (player['rank'], status, player['name'], rankDif)
-		text = ':np-star: %d :np-ship: %d\n:np-econ: %d :np-ind: %d :np-sci: %d' % (player['total_stars'], player['total_strength'], player['total_economy'], player['total_industry'], player['total_science'])
+		text = ':np-star: %d :np-ship: %d :np-res: %d\n:np-econ: %d :np-ind: %d :np-sci: %d' % (player['total_stars'], player['total_strength'], tech, player['total_economy'], player['total_industry'], player['total_science'])
 
 		attachments.append({
 			'color': player['color'],
@@ -95,7 +118,7 @@ def postToSlackCondensed(players, turn):
 
 def postToSlackFull(players, turn):
 	turnEnd = datetime.datetime.fromtimestamp(int(turn['turn_based_time_out'] / 1000)).strftime('%a, %b %-d at %-I:%M:%S %p')
-	cycleText = ", and a new cycle starts" if turn['tick'] % turn['production_rate'] is not 0 else ""
+	cycleText = ", and a new cycle starts" if turn['tick'] % turn['production_rate'] is 0 else ""
 	text = '<!here> Turn *%d* just started%s! It ends %s.\nHere is the leaderboard:' % (turn['turn_num'], cycleText, turnEnd)
 
 	post = {
@@ -139,6 +162,25 @@ def getRankDif(player, playerLastTurn, isCondensed):
 		return "(:green-up: %d )" % (playerLastTurn['rank'] - player['rank'])
 	else:
 		return "" if isCondensed else "No change"
+
+
+def postLastPlayerToSlack(player):
+	# add turn end footer
+	text = '*%s* is the only one left to take their turn!' % (player['name'])
+
+	post = {
+		'username': constants.SLACK_USER,
+		'channel': auth.SLACK_CHANNEL if not constants.DEBUG else auth.SLACK_CHANNEL_DEBUG,
+		'icon_url': constants.SLACK_ICON,
+		'attachments': [{
+			'color': player['color'],
+			'text': text,
+			"mrkdwn_in": ["text"]
+		}],
+	}
+
+	command = constants.SLACK_CURL % (json.dumps(post), auth.SLACK_HOOK)
+	process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 def log(str):
 	logFile = "log" if not constants.DEBUG else "log_debug"

@@ -9,4 +9,4 @@ CONDENSED_POST = True
 CURL_TIMEOUT = 10
 GAME_ID = "5816445419388928"
 SLEEP_TIME = 120
-TURN_FILE = "turndata-%s.json" % (GAME_ID)
+TURN_FILE = "turndata-%s%s.json" % (GAME_ID, '-debug' if DEBUG else '')
